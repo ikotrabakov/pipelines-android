@@ -6,6 +6,12 @@
 pool:
   vmImage: 'macOS-10.15'
 
+- script: |
+    java -version
+  env:
+    JAVA_HOME: $(JAVA_HOME_11_X64)
+    PATH: $(JAVA_HOME_11_X64)/bin:$(PATH)
+
 steps:
 - task: Gradle@2
   inputs:

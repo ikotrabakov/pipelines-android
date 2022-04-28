@@ -3,10 +3,63 @@
 # Add steps that test, sign, and distribute the APK, save build artifacts, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/android
 
+
 pool:
-  vmImage: 'macOS-10.15'
+  name: Azure Pipelines
+  demands:
+    - java
+    - JDK
+
+#Your build pipeline references an undefined variable named ‘Parameters.wrapperScript’. Create or edit the build pipeline for this YAML file, define the variable on the Variables tab. See https://go.microsoft.com/fwlink/?linkid=865972
+#Your build pipeline references an undefined variable named ‘Parameters.tasks’. Create or edit the build pipeline for this YAML file, define the variable on the Variables tab. See https://go.microsoft.com/fwlink/?linkid=865972
 
 steps:
+  - task: Gradle@2
+    displayName: 'gradlew build'
+    inputs:
+      gradleWrapperFile: '$(Parameters.wrapperScript)'
+      tasks: '$(Parameters.tasks)'
+
+  - task: AndroidSigning@3
+    displayName: 'Signing and aligning APK file(s) **/*.apk'
+    inputs:
+      apksign: false
+      zipalign: false
+
+  - task: CopyFiles@2
+    displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
+    inputs:
+      SourceFolder: '$(system.defaultworkingdirectory)'
+      Contents: '**/*.apk'
+      TargetFolder: '$(build.artifactstagingdirectory)'
+    condition: succeededOrFailed()
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact: drop'
+    inputs:
+      PathtoPublish: '$(build.artifactstagingdirectory)'
+    condition: succeededOrFailed()
+
+  - task: AppCenterTest@1
+    displayName: 'Test with Visual Studio App Center'
+    inputs:
+      appFile: '**/*.apk'
+    enabled: false
+    condition: succeededOrFailed()
+
+  - task: AppCenterDistribute@2
+    displayName: 'Deploy **/*.apk to Visual Studio App Center'
+    inputs:
+      appFile: '**/*.apk'
+      symbolsIncludeParentDirectory: false
+    enabled: false
+    condition: succeededOrFailed()
+
+
+#pool:
+#  vmImage: 'macOS-10.15'
+
+#steps:
 #- task: PowerShell@2
 #  inputs:
 #    targetType: 'inline'
@@ -14,20 +67,20 @@ steps:
 #      echo "Begin build"
 #      echo "##vso[task.setvariable variable=JAVA_HOME]$(JAVA_HOME_11_X64)"
 #      echo "##vso[task.setvariable variable=PATH]$(JAVA_HOME_11_X64)\bin;$(PATH)"
-- bash: echo "Build is starting"
 
-- task: Gradle@2
-  inputs:
-    workingDirectory: ''
-    gradleWrapperFile: 'gradlew'
-    gradleOptions: '-Xmx3072m'
-    javaHomeOption: 'JDKVersion'
-    jdkVersionOption: '1.11'
-    jdkArchitectureOption: 'x64'
-    publishJUnitResults: true
-    testResultsFiles: '**/TEST-*.xml'
-    tasks: 'assembleDebug test'
-  displayName: gradlew assembleDebug test
+
+#- task: Gradle@2
+#  inputs:
+#    workingDirectory: ''
+#    gradleWrapperFile: 'gradlew'
+#    gradleOptions: '-Xmx3072m'
+#    javaHomeOption: 'JDKVersion'
+#    jdkVersionOption: '1.11'
+#    jdkArchitectureOption: 'x64'
+#    publishJUnitResults: true
+#    testResultsFiles: '**/TEST-*.xml'
+#    tasks: 'assembleDebug test'
+#  displayName: gradlew assembleDebug test
 
 #- task: CopyFiles@2
 #  inputs:
